@@ -359,17 +359,25 @@ function CloudflareCli(options) {
    * @param query
    * @return {Promise}
    */
-  function find(domain, query) {
+  async function find(domain, query) {
     if (query.name && !query.name.includes(domain)) {
-      query.name = query.name + '.' + domain;
+      query.name = query.name + "." + domain;
     }
     if (query.query) {
       query = _.extend(query, query.query);
       delete query.query;
     }
-    return getZone(domain).then(function (zone) {
-      return self.cloudflareClient.findRecord(zone.id, query);
-    });
+    const zone = await getZone(domain);
+
+    const response = await self.cloudflareClient.findRecord(zone.id, query);
+
+    const records = response.data.result;
+    // add zone_id back into the records
+    for (const record of records) {
+      record.zone_id = zone.id;
+    }
+
+    return response;
   }
 
   /**
